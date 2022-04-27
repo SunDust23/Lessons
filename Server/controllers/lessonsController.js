@@ -3,12 +3,6 @@ const ApiError = require('../error/ApiError');
 
 class LessonController {
     async create(req, res, next) {
-        // const { date, title, status } = req.body;
-        // if (!date) {
-        //     return next(ApiError.badRequest('Не указана дата проведеня урока!'));
-        // }
-        // const lesson = await Lesson.create({  date, title, status  });
-        // return res.json(lesson);
 
         let { title, status, firstDate, lessonsCount, lastDate, teacherIds, days } = req.body;
 
@@ -20,50 +14,70 @@ class LessonController {
         }
         else if (!lastDate && !lessonsCount) {
             let date = firstDate;
-            const lesson = await Lesson.create({  date, title, status  });
+            const lesson = await Lesson.create({ date, title, status });
             return res.json(lesson);
         }
 
-        if (!teacherIds)
-        {
+        if (!teacherIds) {
             return next(ApiError.badRequest('Некому проводить занятия! Необходимо указать учителя!'));
         }
 
         if (!days) {
             days = [0, 1, 2, 3, 4, 5, 6];
         }
-        
+
         let teacher;
         let date = new Date(firstDate);
-        let dayOfWeek = 0;
+        let dayOfWeek2 = 0;
 
         if (lessonsCount) {
+            let i = 0;
+            while ( i < lessonsCount) {
 
-            for (let i = 0; i < lessonsCount; i++) {
+                for (let dayOfWeek = 0; dayOfWeek < days.length; dayOfWeek++) {
+                    if (date.getDay() == days[dayOfWeek]) {
 
-                do {
-                    date.setDate(date.getDate() + 1);
-                } while (date.getDay() != days[dayOfWeek]);
-                console.log(date);
-                let newLesson = await Lesson.create({ date, title, status });
+                        let newLesson = await Lesson.create({ date, title, status });
 
-                for (let j = 0; j < teacherIds.length; j++) {
-                    let lessonId = newLesson.id;
-                    let teacherId = teacherIds[j];
-                    teacher = await LessonTeacher.create({ lessonId, teacherId });
+                        for (let j = 0; j < teacherIds.length; j++) {
+                            let lessonId = newLesson.id;
+                            let teacherId = teacherIds[j];
+                            teacher = await LessonTeacher.create({ lessonId, teacherId });
+                        }
+                        i++;
+                        break;
+                    }
                 }
-                dayOfWeek = ( dayOfWeek + 1 ) % days.length;
-                console.log(dayOfWeek);
+                date.setDate(date.getDate() + 1);
             }
-            const lesson = await Lesson.findAll({where: { title: title}});
-            return res.json(teacher);
+            const lesson = await Lesson.findAll({ where: { title: title } });
+            return res.json(lesson);
         }
 
-        if (lastDate){
 
-            for (let d = new Date(firstDate); d < lastDate; d.setDate(d.getDate() + 1)){
-                console.log(d);
+        if (lastDate) {
+
+            const last = new Date(lastDate);
+
+            while (date.getTime() <= last.getTime()) {
+
+                for (let dayOfWeek = 0; dayOfWeek < days.length; dayOfWeek++) {
+                    if (date.getDay() == days[dayOfWeek]) {
+
+                        let newLesson = await Lesson.create({ date, title, status });
+
+                        for (let j = 0; j < teacherIds.length; j++) {
+                            let lessonId = newLesson.id;
+                            let teacherId = teacherIds[j];
+                            teacher = await LessonTeacher.create({ lessonId, teacherId });
+                        }
+                        break;
+                    }
+                }
+                date.setDate(date.getDate() + 1);
             }
+            const lesson = await Lesson.findAll({ where: { title: title } });
+            return res.json(lesson);
         }
     }
 
